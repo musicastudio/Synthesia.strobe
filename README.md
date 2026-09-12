@@ -51,11 +51,13 @@ falls as the music thickens, instead of having to be turned down by hand.
 
 Synthesia drives these lights with Casio SysEx, and the plugin attaches to the two MIDI output
 entry points those bytes can leave through, `midiOutLongMsg` for the classic backend and
-`winrt_midi_out_port_send` for the optional Windows 10 UWP one, plus `midiOutClose` so nothing is
-left lit when Synthesia releases the device. It matches the 10-byte Casio
-light pattern and passes everything else through untouched, including Synthesia's own keepalive
-and all ordinary music. Because it matches the finished message rather than calling into
-Synthesia, it holds no Synthesia addresses and a Synthesia update cannot break it.
+`winrt_midi_out_port_send` for the optional Windows 10 UWP one. It also watches `midiOutClose`,
+so nothing is left lit when Synthesia releases the device.
+
+It matches the 10-byte Casio light pattern and passes everything else through untouched,
+including Synthesia's own keepalive and all ordinary music. Because it matches the finished
+message rather than calling into Synthesia, it holds no Synthesia addresses and a Synthesia
+update cannot break it.
 
 The design and the reverse-engineering notes are in [docs/design.md](docs/design.md) and
 [docs/hooks.md](docs/hooks.md).
@@ -134,7 +136,7 @@ references. Progress is committed as it goes, so an interrupted run resumes wher
 ```
 synthesia.strobe/
   src/strobe.h                  the strobe logic and its self-check
-  src/synthesia_strobe.cpp      the proxy, the two detours, and the turn clock
+  src/synthesia_strobe.cpp      the proxy, the detours, and the turn clock
   src/version.def               the three forwarded exports
   docs/                         design rationale and reverse-engineering notes
   tools/                        Ghidra helpers and the two tests
@@ -145,8 +147,9 @@ synthesia.strobe/
 ## Status
 
 The strobe logic passes its self-check, and the plugin is verified end to end against a real
-WinMM MIDI port: the hook installs, Synthesia-style light messages are swallowed, and the port
-sees rotated blocks of at most four keys with all ten getting a turn. See
+WinMM MIDI port. The hook installs, Synthesia-style light messages are swallowed, the port sees
+rotated blocks of at most four keys with all ten getting a turn, and closing the port leaves
+nothing lit. It has not yet driven a real LK-S250, nor been loaded by Synthesia itself; see
 [docs/status.md](docs/status.md) for exactly what has and has not been exercised.
 
 ## Licence
