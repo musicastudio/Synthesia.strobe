@@ -1,0 +1,6 @@
+; Synthesia imports exactly these three version.dll entry points; each forwards to the real
+; DLL in System32. Nothing else in the process imports version.dll.
+EXPORTS
+    GetFileVersionInfoSizeW = ProxyGetFileVersionInfoSizeW
+    GetFileVersionInfoW     = ProxyGetFileVersionInfoW
+    VerQueryValueW          = ProxyVerQueryValueW
