@@ -45,16 +45,12 @@ copies `version.dll` in byte-identical to the build output, and uninstalling rem
 uninstaller's own files while leaving `Synthesia.exe` present and unchanged. The elevation prompt
 itself was not exercised, since the test build was compiled without the admin requirement.
 
+**On the real keyboard, inside Synthesia.** The plugin has been installed into Synthesia's folder
+and run against an actual LK-S250, and the key lights cycle as intended. That covers the whole
+path at once, the proxy load, the hook going on before Synthesia opens its MIDI port, the
+interception of the real light messages, and how the rotation looks on the hardware.
+
 ## Not yet verified
-
-**Against the real keyboard.** The strobe has never driven an actual LK-S250 through this
-plugin. The wire protocol, the four-lamp limit and the 45 ms floor on how briefly a light can be
-shown are all established, but how the rotation looks on the hardware is unconfirmed.
-
-**Inside Synthesia.** Every test so far drives the hook from a test process. The plugin has not
-been loaded by `Synthesia.exe` itself, so the proxy load path, the timing of hook installation
-against Synthesia's startup, and the interaction with Synthesia's own keepalive are reasoned
-from the disassembly rather than observed.
 
 **The UWP backend.** The `win10-midi.dll` detour is written against the signature confirmed from
 that DLL's own prologue, but it has never been exercised, since the backend is off by default

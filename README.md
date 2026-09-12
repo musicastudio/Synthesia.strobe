@@ -129,7 +129,7 @@ synthesia.strobe/
 
 ## Status
 
-The cycling logic passes its self-check, and the plugin is verified end to end against a real WinMM MIDI port. The hook installs, Synthesia-style light messages are swallowed, the port sees rotated blocks of at most four keys with all ten getting a turn, and closing the port leaves nothing lit. It has not yet driven a real LK-S250; see [docs/status.md](docs/status.md) for exactly what has and has not been exercised.
+Working, and tested on a real LK-S250 running under Synthesia. The cycling logic also passes its own self-check, and the MIDI interception is verified end to end against a WinMM port, where the hook installs, Synthesia-style light messages are swallowed, the port sees rotated blocks of at most four keys with all ten getting a turn, and closing the port leaves nothing lit. See [docs/status.md](docs/status.md) for exactly what has and has not been exercised.
 
 ## Licence
 
