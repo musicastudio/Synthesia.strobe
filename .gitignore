@@ -1,0 +1,30 @@
+# Build output
+build/
+out/
+dist/
+*.o
+*.obj
+*.lib
+*.exp
+*.pdb
+*.ilk
+
+# Python
+__pycache__/
+*.pyc
+
+# Ghidra / decompilation artifacts (live in ../SYNTHESIA_DISASM, never in git)
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.rep/
+*.gpr
+*.log
+
+# Installer output
+installer/Output/
+
+# Visual Studio
+.vs/
+*.user
