@@ -1,40 +1,41 @@
 # Casio LK-S250 Light Cycling Plugin for Synthesia 10.9
 
-A single DLL that lets the Casio Casiotone LK-S250 show every key Synthesia lights up, instead of only the four the hardware can display at once.
+[![License: GPLv3](https://img.shields.io/github/license/musicastudio/Synthesia.strobe)](https://github.com/musicastudio/Synthesia.strobe/blob/main/LICENSE)
+[![Version](https://img.shields.io/github/v/release/musicastudio/Synthesia.strobe?color=7a39fb)](https://github.com/musicastudio/Synthesia.strobe/releases/latest)
+
+**[Download the latest release](https://github.com/musicastudio/Synthesia.strobe/releases/latest)**
 
 ## Background
 
 ### Synthesia
 
-[Synthesia](https://www.synthesiagame.com/) is a piano app that shows music as notes falling towards a keyboard on screen. There is no sheet music to read, so a piece you have never seen is playable straight away, and it slows down, loops a tricky bar, and waits for you to find the right note before moving on. It scores what you played and shows where you missed, which makes it an unusually patient way to learn a piece.
+[Synthesia](https://www.synthesiagame.com/) is a piano app that shows music as notes falling towards a keyboard on screen. Some keyboards can light their own keys, and Synthesia can drive those lights so the next note to play glows on the instrument itself rather than only on screen. You can then learn a piece while looking at your hands.
 
-It is just as good for listening. Any MIDI file can be dropped in and watched, and seeing the notes fall while they play makes the structure of a piece obvious in a way that audio alone does not.
+I own the Casiotone LK-S250 and purchased Synthesia because it supported driving the lights on this keyboard through the **Proprietary 2** setting in the Key Lights list.
 
-It runs on Windows, macOS, iOS and Android, and it works with any MIDI keyboard. Version 10.9, released 21 December 2022, is the last release, and that is the version this plugin targets.
+What I didn't realize at the time was that the LK-S250 can only light four keys at once. Synthesia sends a light message for every note that should be glowing, but the keyboard can only display four of them, so once a chord or a passage needs more than four, the ones beyond the fourth simply never light.
 
-### Lighted keys and the LK-S250
-
-Some keyboards can light their own keys, and Synthesia can drive those lights so the next note to play glows on the instrument itself rather than only on screen. You can then learn a piece while looking at your hands.
-
-The Casiotone LK-S250 is one of those keyboards, and Synthesia has supported its lights since version 10.6 through the **Proprietary 2** setting in the Key Lights list.
-
-The catch is that the LK-S250 lights at most four keys at any moment. Synthesia sends a light message for every note that should be glowing, but the keyboard can only display four of them, so once a chord or a passage needs more than four, the ones beyond the fourth simply never light. Which four survive is an accident of the order the messages arrived in, not anything musical.
-
-### The idea, and why it took until now
+### The idea
 
 In 2021 I posted a thread on the Synthesia forum called "Key light cycling - Casio LK-S250" (`https://www.synthesiagame.com/forum/viewtopic.php?f=5&t=10217`, now dead since the forum has closed) suggesting a way around the four-key limit. Rather than letting the extra notes vanish, cycle the lights, showing four, then the next few, then the next, fast enough that all of them read as lit.
 
-Nothing came of it at the time, and it is not the sort of thing you can add from outside a closed-source program without a lot of reverse engineering. AI development tools have changed that arithmetic, and this repository is that 2021 idea finally built, as a plugin DLL you copy into the Synthesia folder.
+The author promised to implement it in a future version, but understandably it was low priority, and development of Synthesia appears to have ceased in 2022.
+
+### The implementation
+
+By hooking into Synthesia I have been able to now create a plugin that delivers these features to help myself and fellow Casio LK-S250 / Synthesia users.
 
 ## Install
 
-Copy `version.dll` into Synthesia's program folder, normally
+Run `Synthesia.strobe-Setup.exe` from the [latest release](https://github.com/musicastudio/Synthesia.strobe/releases/latest). It asks for one thing, the folder Synthesia is installed in, and defaults to the usual location. It needs administrator rights, since that folder is under Program Files. Uninstall it from Add or Remove Programs the normal way.
+
+If you would rather not run an installer, `version.dll` is in the release as well. Copy it into Synthesia's program folder yourself, normally
 
 ```
 C:\Program Files (x86)\Synthesia
 ```
 
-That is the whole install. Writing there needs administrator rights. To uninstall, delete the file again.
+That is the whole install either way. To uninstall a manual copy, delete the file again.
 
 In Synthesia, open Settings then Music Devices and set the LK-S250's **Key Lights** to **Proprietary 2**, which is the Casio scheme. That is the only Synthesia setting involved, and it is the same one the keyboard needs without the plugin.
 
@@ -79,6 +80,14 @@ cmake --build build --config Release
 
 That produces `build\Release\version.dll`, which is the whole plugin at about 34 KB.
 
+To build the installer as well, which needs [Inno Setup 6](https://jrsoftware.org/isinfo.php):
+
+```bash
+powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1
+```
+
+That writes `installer\Output\Synthesia.strobe-Setup.exe`.
+
 ### Tests
 
 `build\Release\strobe_test.exe` runs the cycling logic against its invariants with no keyboard and no Synthesia, and is the check to run after touching the rotation.
@@ -113,6 +122,7 @@ synthesia.strobe/
   src/version.def               the forwarded exports
   docs/                         design rationale and reverse-engineering notes
   tools/                        Ghidra helpers and the two tests
+  installer/                    Inno Setup script and its build script
   third_party/minhook           vendored hooking library
   ../SYNTHESIA_DISASM/          binaries and the Ghidra project (not in git)
 ```
