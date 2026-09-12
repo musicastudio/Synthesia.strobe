@@ -78,7 +78,7 @@ cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 cmake --build build --config Release
 ```
 
-That produces `build\Release\version.dll`, which is the whole plugin at about 34 KB.
+That produces `build\Release\version.dll`, which is the whole plugin at about 36 KB.
 
 To build the installer as well, which needs [Inno Setup 6](https://jrsoftware.org/isinfo.php):
 

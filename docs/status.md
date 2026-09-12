@@ -40,6 +40,11 @@ The built DLL is x64 and exports exactly the same seventeen names as the real Sy
 which the loopback test checks by comparing the two export tables. Both the wide and the ANSI
 query paths are called through the proxy, the ANSI one being what the display driver uses.
 
+**The installer**, compiled and then run end to end against a stand-in Synthesia folder. Installing
+copies `version.dll` in byte-identical to the build output, and uninstalling removes it and the
+uninstaller's own files while leaving `Synthesia.exe` present and unchanged. The elevation prompt
+itself was not exercised, since the test build was compiled without the admin requirement.
+
 ## Not yet verified
 
 **Against the real keyboard.** The strobe has never driven an actual LK-S250 through this
