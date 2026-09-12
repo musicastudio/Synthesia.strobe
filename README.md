@@ -1,4 +1,4 @@
-# Casio LK-S250 Light Cycling Plugin for Synthesia 10.9
+# *Synthesia.strobe*<br/>Casio LK-S250 Light Cycling Plugin for Synthesia 10.9 (windows)
 
 [![License: GPLv3](https://img.shields.io/github/license/musicastudio/Synthesia.strobe)](https://github.com/musicastudio/Synthesia.strobe/blob/main/LICENSE)
 [![Version](https://img.shields.io/github/v/release/musicastudio/Synthesia.strobe?color=7a39fb)](https://github.com/musicastudio/Synthesia.strobe/releases/latest)
@@ -15,15 +15,17 @@ I own the Casiotone LK-S250 and purchased Synthesia because it supported driving
 
 What I didn't realize at the time was that the LK-S250 can only light four keys at once. Synthesia sends a light message for every note that should be glowing, but the keyboard can only display four of them, so once a chord or a passage needs more than four, the ones beyond the fourth simply never light.
 
-### The idea
+This can be frustrating if you wish to practice using two hands, as there are only enough lights for four fingers at once.
 
-In 2021 I posted a thread on the Synthesia forum called "Key light cycling - Casio LK-S250" (`https://www.synthesiagame.com/forum/viewtopic.php?f=5&t=10217`, now dead since the forum has closed) suggesting a way around the four-key limit. Rather than letting the extra notes vanish, cycle the lights, showing four, then the next few, then the next, fast enough that all of them read as lit.
+### The idea and solution
 
-The author promised to implement it in a future version, but understandably it was low priority, and development of Synthesia appears to have ceased in 2022.
+In 2021 I posted a thread on the Synthesia forum called [Key light cycling - Casio LK-S250](https://www.synthesiagame.com/forum/viewtopic.php?f=5&t=10217) (no longer works since [the forum has been closed due to bots](https://www.synthesiagame.com/forum/)) suggesting that Synthesia cycle the lights, showing four, then the next few, then the next, fast enough that all of them read as lit.
 
-### The implementation
+The author responded and promised to implement it in a future version, but understandably it was low priority. Unfortunately development of Synthesia appears to have ceased in 2022.
 
-By hooking into Synthesia I have been able to now create a plugin that delivers these features to help myself and fellow Casio LK-S250 / Synthesia users.
+### The plugin implementation
+
+While Synthesia offers no official plugin framework, a DLL file dropped into the same folder as Synthesia can work the same way by hooking into the application at runtime on the Windows version of the app. Using this approach, I have been able to create this plugin that delivers these features to help myself and fellow Casio LK-S250 / Synthesia users.
 
 ## Install
 
@@ -62,11 +64,7 @@ The design and the reverse-engineering notes are in [docs/design.md](docs/design
 
 ## How it was made
 
-Using Claude, `Synthesia.exe` was disassembled with [Ghidra](https://ghidra-sre.org/) and the decompiled C was read to find where the key lights come from. That turned up the Casio message templates in `.rdata`, the dispatch that rewrites notes into vendor SysEx, the 180 ms keepalive that holds the keyboard's light display open, and the note range Synthesia clamps to.
-
-The analysis also settled the design question. The obvious hook, Synthesia's internal light logic, turned out to be the generic MIDI send for the whole program, reached from about fifty call sites and deciding from device state whether a note becomes a light. Hooking the finished SysEx at the MIDI output boundary is both simpler and version-proof, and the decompilation is what proved there are exactly two such boundaries and that swallowing a message at either one cannot stall Synthesia. Those notes are in [docs/hooks.md](docs/hooks.md).
-
-To be clear about what that means, this repository contains no Synthesia source and no decompiled Synthesia content. The analysis only informed where the plugin attaches at runtime, and Synthesia's own files are never touched on disk.
+`Synthesia.exe` was disassembled with [Ghidra](https://ghidra-sre.org/) and the decompiled C was read using Claude to find where the key lights come from. That turned up the Casio message templates in `.rdata`, the dispatch that rewrites notes into vendor SysEx, the 180 ms keepalive that holds the keyboard's light display open, and the note range Synthesia clamps to. Dev notes are in [docs/hooks.md](docs/hooks.md).
 
 ## Build
 
@@ -134,5 +132,3 @@ Working, and tested on a real LK-S250 running under Synthesia. The cycling logic
 ## Licence
 
 Released under the GNU General Public License v3.0; see [LICENSE](LICENSE).
-
-It is an independent interoperability add-on for software you already own. It ships no Synthesia code or content, never modifies Synthesia on disk, and only forwards the system `version.dll` entry points Synthesia asks for. The loopback test loads `teVirtualMIDI64.dll` at run time if it is present and neither ships nor requires it.
