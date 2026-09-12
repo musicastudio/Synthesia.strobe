@@ -209,6 +209,11 @@ def main() -> int:
     if len(lights) <= len(notes):
         print("FAIL: no rotation happened, the messages just passed through")
         ok = False
+    # midiOutClose is hooked so the last block is turned off while the port still works,
+    # rather than being left lit on the keyboard.
+    if lit:
+        print(f"FAIL: {sorted(lit)} still lit after the port closed")
+        ok = False
 
     print("hook loopback test:", "PASS" if ok else "FAIL")
     return 0 if ok else 1

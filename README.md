@@ -51,7 +51,8 @@ falls as the music thickens, instead of having to be turned down by hand.
 
 Synthesia drives these lights with Casio SysEx, and the plugin attaches to the two MIDI output
 entry points those bytes can leave through, `midiOutLongMsg` for the classic backend and
-`winrt_midi_out_port_send` for the optional Windows 10 UWP one. It matches the 10-byte Casio
+`winrt_midi_out_port_send` for the optional Windows 10 UWP one, plus `midiOutClose` so nothing is
+left lit when Synthesia releases the device. It matches the 10-byte Casio
 light pattern and passes everything else through untouched, including Synthesia's own keepalive
 and all ordinary music. Because it matches the finished message rather than calling into
 Synthesia, it holds no Synthesia addresses and a Synthesia update cannot break it.

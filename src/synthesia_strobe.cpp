@@ -59,6 +59,7 @@ bool IsKeepalive(const BYTE* d, DWORD n) {
 enum class Sink { None, WinMM, Uwp };
 
 using MidiOutLongMsgFn = MMRESULT(WINAPI*)(HMIDIOUT, LPMIDIHDR, UINT);
+using MidiOutCloseFn = MMRESULT(WINAPI*)(HMIDIOUT);
 using UwpSendFn = int (*)(void*, const BYTE*, unsigned);
 
 std::mutex g_lock;                 // guards the strobe, the sink, and our own sends
@@ -67,6 +68,7 @@ Sink g_sink = Sink::None;
 HMIDIOUT g_winmmOut = nullptr;
 void* g_uwpPort = nullptr;
 MidiOutLongMsgFn g_origLongMsg = nullptr;
+MidiOutCloseFn g_origClose = nullptr;
 UwpSendFn g_origUwpSend = nullptr;
 std::atomic<DWORD> g_lastKeepalive{0};
 std::atomic<bool> g_uwpHooked{false};
@@ -134,6 +136,21 @@ MMRESULT WINAPI MidiOutLongMsg_Detour(HMIDIOUT hmo, LPMIDIHDR pmh, UINT cbmh) {
         }
     }
     return g_origLongMsg(hmo, pmh, cbmh);
+}
+
+// Synthesia resets and closes the port together when it lets a device go. Clear our lights
+// while the handle is still usable, so nothing is left lit and the turn clock stops driving a
+// handle that is about to become invalid.
+MMRESULT WINAPI MidiOutClose_Detour(HMIDIOUT hmo) {
+    {
+        std::lock_guard<std::mutex> lk(g_lock);
+        if (g_sink == Sink::WinMM && g_winmmOut == hmo) {
+            g_strobe->Clear();
+            g_sink = Sink::None;
+            g_winmmOut = nullptr;
+        }
+    }
+    return g_origClose(hmo);
 }
 
 int UwpSend_Detour(void* port, const BYTE* data, unsigned len) {
@@ -210,11 +227,14 @@ DWORD WINAPI InitThread(LPVOID) {
     HMODULE winmm = GetModuleHandleW(L"winmm.dll");
     if (!winmm) winmm = LoadLibraryW(L"winmm.dll");
     if (winmm) {
-        void* target = reinterpret_cast<void*>(GetProcAddress(winmm, "midiOutLongMsg"));
-        if (target && MH_CreateHook(target, reinterpret_cast<void*>(&MidiOutLongMsg_Detour),
-                                    reinterpret_cast<void**>(&g_origLongMsg)) == MH_OK) {
-            MH_EnableHook(target);
-        }
+        auto hook = [winmm](const char* name, void* detour, void** orig) {
+            void* target = reinterpret_cast<void*>(GetProcAddress(winmm, name));
+            if (target && MH_CreateHook(target, detour, orig) == MH_OK) MH_EnableHook(target);
+        };
+        hook("midiOutLongMsg", reinterpret_cast<void*>(&MidiOutLongMsg_Detour),
+             reinterpret_cast<void**>(&g_origLongMsg));
+        hook("midiOutClose", reinterpret_cast<void*>(&MidiOutClose_Detour),
+             reinterpret_cast<void**>(&g_origClose));
     }
     if (!g_origLongMsg) return 0;  // nothing to intercept; leave Synthesia completely stock
 

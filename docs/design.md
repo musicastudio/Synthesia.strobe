@@ -37,9 +37,14 @@ bytes can leave the process by exactly two routes, both single exported function
 |---|---|---|
 | `midiOutLongMsg` | `winmm.dll` | the classic backend, which is the default |
 | `winrt_midi_out_port_send` | `win10-midi.dll` | the Windows 10 UWP backend, off by default |
+| `midiOutClose` | `winmm.dll` | port teardown, so nothing is left lit |
 
-The plugin detours both and matches the 10-byte Casio pattern. Anything else, including
+The plugin detours all three and matches the 10-byte Casio pattern. Anything else, including
 Synthesia's own keepalive and all ordinary music, passes straight through untouched.
+
+The close hook exists because Synthesia resets and closes the port together when it releases a
+device. Clearing the lights there, while the handle still works, both leaves the keyboard dark
+and stops the turn clock from driving a handle that is about to become invalid.
 
 A light message is swallowed rather than forwarded, because the strobe re-emits a rotated subset
 in its place. The remaining detail is that the strobe's own sends go out through the saved

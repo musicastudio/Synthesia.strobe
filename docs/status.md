@@ -26,6 +26,7 @@ unprepare with no wait, and records what actually arrives at the port.
 - At most four keys are lit at any moment.
 - All ten keys get a turn.
 - Keepalives are emitted while keys are held and nothing upstream is sending.
+- Closing the port turns the remaining block off, leaving no key lit.
 
 **Static facts about Synthesia 10.9**, read from Ghidra output for the shipped build and
 recorded in [hooks.md](hooks.md). The Casio message templates and their addresses, the
