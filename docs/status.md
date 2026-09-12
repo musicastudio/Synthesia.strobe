@@ -36,9 +36,9 @@ flags, and the fact that Synthesia never waits for SysEx completion. The install
 `Synthesia.exe` was confirmed byte-identical to the analyzed copy.
 
 **Install mechanics.** `version.dll` is not a KnownDLL, so an application-directory copy wins.
-Synthesia is the only module in the process importing it, and it imports exactly the three
-entry points the proxy forwards. The built DLL is x64 and exports those three names and nothing
-else.
+The built DLL is x64 and exports exactly the same seventeen names as the real System32 version,
+which the loopback test checks by comparing the two export tables. Both the wide and the ANSI
+query paths are called through the proxy, the ANSI one being what the display driver uses.
 
 ## Not yet verified
 

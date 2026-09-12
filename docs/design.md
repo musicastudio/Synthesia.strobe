@@ -69,9 +69,20 @@ Synthesia imports `version.dll`, and Windows searches the application directory 
 A `version.dll` in Synthesia's own folder therefore loads in place of the system one, which makes
 the install a single file with nothing to register and nothing to run.
 
-Synthesia is the only module in the process that imports `version.dll`, and it imports exactly
-three entry points, so the proxy forwards those three to the real DLL loaded by full path from
-System32. Loading by full path is what stops the proxy from finding itself.
+The proxy forwards all seventeen entry points the real DLL exports, to the real DLL loaded by
+full path from System32. Loading by full path is what stops the proxy from finding itself.
+
+Forwarding only the three Synthesia itself imports is not enough, and that mistake is worth
+recording. Synthesia is the only module in its own folder that imports `version.dll`, but it is
+not the only one in the process. Synthesia uses OpenGL, which loads the display driver, and the
+NVIDIA driver imports `VerQueryValueA`. A missing export is not a silent no-op; it is a hard
+"entry point not found" box at load, and the program does not start. So the export list is
+matched against the real DLL rather than against what Synthesia alone needs, and the loopback
+test now asserts that.
+
+Each forward resolves on first use through a function-local static, which keeps `LoadLibrary`
+out of `DllMain` and off the loader lock. The signatures come from the SDK headers via
+`decltype`, so a wrong parameter list is a compile error rather than a corrupted stack.
 
 `version.dll` is not in the KnownDLLs list, which is what makes this work at all; a KnownDLL
 would be resolved from the system copy regardless of what sits next to the executable.

@@ -92,15 +92,66 @@ def light(note: int, on: bool) -> bytes:
     return LIGHT_PREFIX + bytes([note, 1 if on else 0, 0xF7])
 
 
-def check_proxy(dll) -> bool:
-    """The three forwarded version.dll exports must behave like the real System32 ones.
+SYSTEM_VERSION = "C:\\Windows\\System32\\version.dll"
 
-    Synthesia calls these during startup, so a broken forward would break Synthesia itself.
+
+def pe_exports(path: Path | str) -> set[str]:
+    """Every name a PE file exports."""
+    f = Path(path).read_bytes()
+    pe = int.from_bytes(f[0x3C:0x40], "little")
+    nsec = int.from_bytes(f[pe + 6:pe + 8], "little")
+    optsz = int.from_bytes(f[pe + 20:pe + 22], "little")
+    opt = pe + 24
+    magic = int.from_bytes(f[opt:opt + 2], "little")
+    dd = opt + (112 if magic == 0x20B else 96)
+    erva = int.from_bytes(f[dd:dd + 4], "little")
+    secs = []
+    so = opt + optsz
+    for i in range(nsec):
+        b = so + i * 40
+        vs = int.from_bytes(f[b + 8:b + 12], "little")
+        va = int.from_bytes(f[b + 12:b + 16], "little")
+        rs = int.from_bytes(f[b + 16:b + 20], "little")
+        ro = int.from_bytes(f[b + 20:b + 24], "little")
+        secs.append((va, vs, ro, rs))
+
+    def r2o(r):
+        for va, vs, ro, rs in secs:
+            if va <= r < va + max(vs, rs):
+                return ro + (r - va)
+        return None
+
+    o = r2o(erva)
+    nnam = int.from_bytes(f[o + 24:o + 28], "little")
+    anam = int.from_bytes(f[o + 32:o + 36], "little")
+    no = r2o(anam)
+    names = set()
+    for i in range(nnam):
+        nr = int.from_bytes(f[no + i * 4:no + i * 4 + 4], "little")
+        s = r2o(nr)
+        names.add(f[s:f.index(b"\0", s)].decode())
+    return names
+
+
+def check_proxy(dll) -> bool:
+    """The proxy must export everything the real version.dll does, and forward it correctly.
+
+    Synthesia is not the only module that imports version.dll once the process is up. The
+    NVIDIA OpenGL driver, pulled in through opengl32, imports VerQueryValueA, and a missing
+    export is a hard "entry point not found" failure at load. So the export list is compared
+    against the real DLL rather than against what Synthesia alone needs.
     """
-    real = ctypes.WinDLL("C:\\Windows\\System32\\version.dll")
-    target = "C:\\Windows\\System32\\kernel32.dll"
     ok = True
-    for mod, label in ((real, "system"), (dll, "proxy")):
+    real_names = pe_exports(SYSTEM_VERSION)
+    our_names = pe_exports(DLL)
+    missing = sorted(real_names - our_names)
+    if missing:
+        print(f"FAIL: these exports are missing and would break any module importing them: {missing}")
+        ok = False
+
+    real = ctypes.WinDLL(SYSTEM_VERSION)
+    target = "C:\\Windows\\System32\\kernel32.dll"
+    for mod in (real, dll):
         mod.GetFileVersionInfoSizeW.restype = wt.DWORD
         mod.GetFileVersionInfoSizeW.argtypes = [wt.LPCWSTR, ctypes.POINTER(wt.DWORD)]
     handle = wt.DWORD(0)
@@ -110,17 +161,21 @@ def check_proxy(dll) -> bool:
         print(f"FAIL: GetFileVersionInfoSizeW returned {got}, the system DLL returns {want}")
         ok = False
 
+    # Both the wide and the ANSI query paths, the ANSI one being what the display driver uses.
     buf = ctypes.create_string_buffer(got)
     if not dll.GetFileVersionInfoW(target, 0, got, buf):
         print("FAIL: GetFileVersionInfoW through the proxy failed")
         ok = False
     else:
-        val = ctypes.c_void_p()
-        ln = ctypes.c_uint(0)
-        if not dll.VerQueryValueW(buf, "\\", ctypes.byref(val), ctypes.byref(ln)) or ln.value == 0:
-            print("FAIL: VerQueryValueW through the proxy failed")
-            ok = False
-    print("version.dll proxy forwarding:", "PASS" if ok else "FAIL")
+        for name, sub in (("VerQueryValueW", "\\"), ("VerQueryValueA", b"\\")):
+            val = ctypes.c_void_p()
+            ln = ctypes.c_uint(0)
+            fn = getattr(dll, name)
+            if not fn(buf, sub, ctypes.byref(val), ctypes.byref(ln)) or ln.value == 0:
+                print(f"FAIL: {name} through the proxy failed")
+                ok = False
+
+    print(f"version.dll proxy ({len(our_names)} exports):", "PASS" if ok else "FAIL")
     return ok
 
 

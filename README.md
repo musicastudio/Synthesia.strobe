@@ -28,8 +28,8 @@ it is the same one the keyboard needs without the plugin.
 
 Nothing is registered, no service is installed, and no Synthesia file is modified. Synthesia
 loads `version.dll` from its own folder because Windows searches the application directory
-before System32; the three entry points Synthesia actually uses are passed straight through to
-the real system DLL, so Synthesia behaves exactly as before in every other respect.
+before System32, and all seventeen entry points the real DLL exports are passed straight
+through to it, so Synthesia and everything else in the process behave exactly as before.
 
 ## How it works
 
@@ -137,7 +137,7 @@ references. Progress is committed as it goes, so an interrupted run resumes wher
 synthesia.strobe/
   src/strobe.h                  the strobe logic and its self-check
   src/synthesia_strobe.cpp      the proxy, the detours, and the turn clock
-  src/version.def               the three forwarded exports
+  src/version.def               the forwarded exports
   docs/                         design rationale and reverse-engineering notes
   tools/                        Ghidra helpers and the two tests
   third_party/minhook           vendored hooking library

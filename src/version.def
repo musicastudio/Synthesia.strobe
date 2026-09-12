@@ -1,6 +1,25 @@
-; Synthesia imports exactly these three version.dll entry points; each forwards to the real
-; DLL in System32. Nothing else in the process imports version.dll.
+; Every entry point the real version.dll exports must be present here, not only the three
+; Synthesia itself calls. Other modules loaded into the process import from this DLL too, and a
+; missing export is a hard load failure for them.
+;
+; VerLanguageName is a forwarder to KERNEL32 in the real DLL, so it is forwarded the same way
+; here. KERNEL32 is a KnownDLL, which is always resolved from the system copy, so that forward
+; can never come back to us.
 EXPORTS
-    GetFileVersionInfoSizeW = ProxyGetFileVersionInfoSizeW
-    GetFileVersionInfoW     = ProxyGetFileVersionInfoW
-    VerQueryValueW          = ProxyVerQueryValueW
+    GetFileVersionInfoA        = Proxy_GetFileVersionInfoA
+    GetFileVersionInfoByHandle = Proxy_GetFileVersionInfoByHandle
+    GetFileVersionInfoExA      = Proxy_GetFileVersionInfoExA
+    GetFileVersionInfoExW      = Proxy_GetFileVersionInfoExW
+    GetFileVersionInfoSizeA    = Proxy_GetFileVersionInfoSizeA
+    GetFileVersionInfoSizeExA  = Proxy_GetFileVersionInfoSizeExA
+    GetFileVersionInfoSizeExW  = Proxy_GetFileVersionInfoSizeExW
+    GetFileVersionInfoSizeW    = Proxy_GetFileVersionInfoSizeW
+    GetFileVersionInfoW        = Proxy_GetFileVersionInfoW
+    VerFindFileA               = Proxy_VerFindFileA
+    VerFindFileW               = Proxy_VerFindFileW
+    VerInstallFileA            = Proxy_VerInstallFileA
+    VerInstallFileW            = Proxy_VerInstallFileW
+    VerLanguageNameA           = KERNEL32.VerLanguageNameA
+    VerLanguageNameW           = KERNEL32.VerLanguageNameW
+    VerQueryValueA             = Proxy_VerQueryValueA
+    VerQueryValueW             = Proxy_VerQueryValueW

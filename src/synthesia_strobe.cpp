@@ -259,31 +259,64 @@ FARPROC RealVersion(const char* name) {
     return g_realVersion ? GetProcAddress(g_realVersion, name) : nullptr;
 }
 
+// Resolve on first use rather than at load. A function-local static is initialised once and
+// thread-safely, which keeps LoadLibrary out of DllMain and off the loader lock.
+template <typename Fn>
+Fn Real(const char* name) {
+    return reinterpret_cast<Fn>(RealVersion(name));
+}
+
 }  // namespace
 
-extern "C" {
+// Every entry point the real version.dll exports is forwarded, not just the ones Synthesia
+// itself calls. Other modules land in the process and import from this DLL too; the NVIDIA
+// OpenGL driver, which Synthesia pulls in through opengl32, needs VerQueryValueA. A missing
+// export is a hard "entry point not found" failure at load, so the whole surface is covered.
+//
+// `decltype(&Name)` takes each signature straight from the SDK headers, so a wrong parameter
+// list here is a compile error rather than a corrupted stack at run time.
+#define FORWARD(ret, name, params, args, fail)                     \
+    extern "C" ret WINAPI Proxy_##name params {                    \
+        static auto fn = Real<decltype(&name)>(#name);             \
+        return fn ? fn args : fail;                                \
+    }
 
-DWORD WINAPI ProxyGetFileVersionInfoSizeW(LPCWSTR file, LPDWORD handle) {
-    using Fn = DWORD(WINAPI*)(LPCWSTR, LPDWORD);
-    auto fn = reinterpret_cast<Fn>(RealVersion("GetFileVersionInfoSizeW"));
-    return fn ? fn(file, handle) : 0;
+FORWARD(DWORD, GetFileVersionInfoSizeA, (LPCSTR f, LPDWORD h), (f, h), 0)
+FORWARD(DWORD, GetFileVersionInfoSizeW, (LPCWSTR f, LPDWORD h), (f, h), 0)
+FORWARD(BOOL, GetFileVersionInfoA, (LPCSTR f, DWORD h, DWORD l, LPVOID d), (f, h, l, d), FALSE)
+FORWARD(BOOL, GetFileVersionInfoW, (LPCWSTR f, DWORD h, DWORD l, LPVOID d), (f, h, l, d), FALSE)
+FORWARD(DWORD, GetFileVersionInfoSizeExA, (DWORD fl, LPCSTR f, LPDWORD h), (fl, f, h), 0)
+FORWARD(DWORD, GetFileVersionInfoSizeExW, (DWORD fl, LPCWSTR f, LPDWORD h), (fl, f, h), 0)
+FORWARD(BOOL, GetFileVersionInfoExA, (DWORD fl, LPCSTR f, DWORD h, DWORD l, LPVOID d),
+        (fl, f, h, l, d), FALSE)
+FORWARD(BOOL, GetFileVersionInfoExW, (DWORD fl, LPCWSTR f, DWORD h, DWORD l, LPVOID d),
+        (fl, f, h, l, d), FALSE)
+FORWARD(BOOL, VerQueryValueA, (LPCVOID b, LPCSTR s, LPVOID* p, PUINT l), (b, s, p, l), FALSE)
+FORWARD(BOOL, VerQueryValueW, (LPCVOID b, LPCWSTR s, LPVOID* p, PUINT l), (b, s, p, l), FALSE)
+FORWARD(DWORD, VerFindFileA,
+        (DWORD u, LPCSTR f, LPCSTR w, LPCSTR a, LPSTR c, PUINT cl, LPSTR d, PUINT dl),
+        (u, f, w, a, c, cl, d, dl), 0)
+FORWARD(DWORD, VerFindFileW,
+        (DWORD u, LPCWSTR f, LPCWSTR w, LPCWSTR a, LPWSTR c, PUINT cl, LPWSTR d, PUINT dl),
+        (u, f, w, a, c, cl, d, dl), 0)
+FORWARD(DWORD, VerInstallFileA,
+        (DWORD u, LPCSTR s, LPCSTR d, LPCSTR sd, LPCSTR dd, LPCSTR c, LPSTR t, PUINT tl),
+        (u, s, d, sd, dd, c, t, tl), 0)
+FORWARD(DWORD, VerInstallFileW,
+        (DWORD u, LPCWSTR s, LPCWSTR d, LPCWSTR sd, LPCWSTR dd, LPCWSTR c, LPWSTR t, PUINT tl),
+        (u, s, d, sd, dd, c, t, tl), 0)
+
+#undef FORWARD
+
+// Undocumented, so there is no SDK declaration to check against and no other DLL exporting it
+// to forward to. Nothing is known to call it; the export exists so that a module importing it
+// by name still loads. The four arguments are passed in registers, so a caller using fewer is
+// unaffected either way.
+extern "C" BOOL WINAPI Proxy_GetFileVersionInfoByHandle(DWORD a, HANDLE b, DWORD c, LPVOID d) {
+    using Fn = BOOL(WINAPI*)(DWORD, HANDLE, DWORD, LPVOID);
+    static auto fn = Real<Fn>("GetFileVersionInfoByHandle");
+    return fn ? fn(a, b, c, d) : FALSE;
 }
-
-BOOL WINAPI ProxyGetFileVersionInfoW(LPCWSTR file, DWORD handle, DWORD len,
-                                                           LPVOID data) {
-    using Fn = BOOL(WINAPI*)(LPCWSTR, DWORD, DWORD, LPVOID);
-    auto fn = reinterpret_cast<Fn>(RealVersion("GetFileVersionInfoW"));
-    return fn ? fn(file, handle, len, data) : FALSE;
-}
-
-BOOL WINAPI ProxyVerQueryValueW(LPCVOID block, LPCWSTR sub, LPVOID* buf,
-                                                      PUINT len) {
-    using Fn = BOOL(WINAPI*)(LPCVOID, LPCWSTR, LPVOID*, PUINT);
-    auto fn = reinterpret_cast<Fn>(RealVersion("VerQueryValueW"));
-    return fn ? fn(block, sub, buf, len) : FALSE;
-}
-
-}  // extern "C"
 
 BOOL APIENTRY DllMain(HMODULE self, DWORD reason, LPVOID) {
     if (reason == DLL_PROCESS_ATTACH) {
