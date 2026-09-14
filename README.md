@@ -5,6 +5,8 @@
 
 **[Download the latest release](https://github.com/musicastudio/Synthesia.strobe/releases/latest)**
 
+**Discord:** https://discord.gg/jSTRY7n7ZJ
+
 ## Background
 
 ### Synthesia
