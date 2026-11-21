@@ -131,6 +131,10 @@ synthesia.strobe/
 
 Working, and tested on a real LK-S250 running under Synthesia. The cycling logic also passes its own self-check, and the MIDI interception is verified end to end against a WinMM port, where the hook installs, Synthesia-style light messages are swallowed, the port sees rotated blocks of at most four keys with all ten getting a turn, and closing the port leaves nothing lit. See [docs/status.md](docs/status.md) for exactly what has and has not been exercised.
 
+## AI use disclosure
+
+Synthesia.strobe was built using [Claude Code](https://claude.com/claude-code) with Claude Fable 5.1, Claude Opus 4.8 and Claude Opus 5.
+
 ## Licence
 
 Released under the GNU General Public License v3.0; see [LICENSE](LICENSE).
